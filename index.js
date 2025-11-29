@@ -136,7 +136,122 @@ makePlayPauseButton = function(svg, onToggle) {
   return { group, text };
 }
 
-// Célula 12: [Sistema Solar] ==================================================================
+// Célula 12: [Menu de Velocidade] =============================================================
+
+// Célula 12.1
+
+mutable speed = 1;
+
+// Célula 12.2
+
+// === Menu de Velocidade (Engrenagem + Controles) ===
+makeSpeedMenu = function(container, svg) {
+  
+  // === Menu flutuante (inicialmente oculto) ===
+  const speedMenu = document.createElement("div");
+  speedMenu.style.position = "absolute";
+  speedMenu.style.bottom = "60px"; // Acima dos controles inferiores
+  speedMenu.style.left = "10px";
+  speedMenu.style.background = "#2a2a2a"; // Estilo painel escuro
+  speedMenu.style.padding = "15px";
+  speedMenu.style.borderRadius = "8px";
+  speedMenu.style.boxShadow = "0 4px 8px rgba(0,0,0,0.5)";
+  speedMenu.style.display = "none";
+  speedMenu.style.color = "white";
+  speedMenu.style.width = "300px";
+
+  // Estrutura interna do menu
+  speedMenu.innerHTML = `
+    <strong>Velocidade da reprodução</strong>
+    <hr style="border-color:#555;">
+
+    <label for="speedSlider">Velocidade:</label>
+
+    <!-- Controles principais -->
+    <input type="range" id="speedSlider" min="0.1" max="10" step="0.1" value="${mutable speed}" style="width: 100%;">
+    <input type="number" id="speedNumber" min="0.1" max="10" step="0.1" value="${mutable speed}" style="width: 60px;">
+
+    <!-- Atalhos rápidos -->
+    <div style="margin-top:10px;">
+      Opções fixas:
+      <button id="btn-05x">0.5x</button>
+      <button id="btn-1x">1x</button>
+      <button id="btn-2x">2x</button>
+    </div>
+  `;
+
+  container.appendChild(speedMenu);
+
+  // === Sincronização dos controles de velocidade ===
+  const sliderInput = speedMenu.querySelector("#speedSlider");
+  const numberInput = speedMenu.querySelector("#speedNumber");
+
+  // Atualiza velocidade e sincroniza campos
+  const updateSpeed = (newSpeed) => {
+
+      // Verifica se o novo valor é um número válido, senão usa 1 como padrão
+      const validatedSpeed = isNaN(newSpeed) || newSpeed === 0 ? 1 : newSpeed;
+    
+      // Altera a variável 'mutable'
+      mutable speed = validatedSpeed; 
+      sliderInput.value = validatedSpeed;
+      numberInput.value = validatedSpeed;
+  };
+
+  // Inputs manuais
+  sliderInput.addEventListener("input", (e) => updateSpeed(parseFloat(e.target.value)));
+  numberInput.addEventListener("input", (e) => updateSpeed(parseFloat(e.target.value)));
+
+  // Botões de velocidade fixa
+  speedMenu.querySelector("#btn-05x").addEventListener("click", () => updateSpeed(0.5));
+  speedMenu.querySelector("#btn-1x").addEventListener("click", () => updateSpeed(1));
+  speedMenu.querySelector("#btn-2x").addEventListener("click", () => updateSpeed(2));
+
+  // === Ícone de configurações (Engrenagem) ===
+  const settingsIcon = svg.append("g")
+    .attr("transform", "translate(80, 660)") // Posição próxima ao botão Play/Pause
+    .style("cursor", "pointer")
+    .on("click", (event) => {
+      // Evita fechamento imediato do menu
+      event.stopPropagation();
+      speedMenu.style.display = (speedMenu.style.display === "none") ? "block" : "none";
+    });
+
+  // Ícone simples (placeholder visual)
+  settingsIcon.append("rect")
+    .attr("width", 30)
+    .attr("height", 25)
+    .attr("fill", "#555")
+    .attr("rx", 5);
+  settingsIcon.append("text")
+    .attr("x", 15)
+    .attr("y", 17)
+    .attr("fill", "white")
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "middle")
+    .style("font-size", "18px")
+    .text("⚙︎");
+  
+  // Adiciona o listener para fechar o menu ao clicar fora
+  document.addEventListener("click", (event) => {
+    // Verifica se o clique ocorreu fora do menu E fora do ícone de engrenagem
+    if (!speedMenu.contains(event.target) && !settingsIcon.node().contains(event.target)) {
+      speedMenu.style.display = "none";
+    }
+  });
+
+  // Adicione também a linha para evitar a propagação nos inputs
+  sliderInput.addEventListener("input", (e) => {
+      e.stopPropagation(); // Adicione esta linha
+      updateSpeed(parseFloat(e.target.value));
+  });
+  numberInput.addEventListener("input", (e) => {
+      e.stopPropagation(); // Adicione esta linha
+      updateSpeed(parseFloat(e.target.value));
+  });
+}
+
+// Célula 13: [Sistema Solar] ==================================================================
 
 viewof solarSystem = {
 
@@ -262,89 +377,7 @@ viewof solarSystem = {
     // Fim do bloco .each()
 
   // === Menu de Velocidade (Engrenagem + Controles) ===
-  
-  // Menu flutuante (inicialmente oculto)
-  const speedMenu = document.createElement("div");
-  speedMenu.style.position = "absolute";
-  speedMenu.style.bottom = "60px";                  // Acima dos controles inferiores
-  speedMenu.style.left = "10px";
-  speedMenu.style.background = "#2a2a2a";           // Estilo painel escuro
-  speedMenu.style.padding = "15px";
-  speedMenu.style.borderRadius = "8px";
-  speedMenu.style.boxShadow = "0 4px 8px rgba(0,0,0,0.5)";
-  speedMenu.style.display = "none";
-  speedMenu.style.color = "white";
-  speedMenu.style.width = "300px";
-
-  // Estrutura interna do menu
-  speedMenu.innerHTML = `
-    <strong>Velocidade da reprodução</strong>
-    <hr style="border-color:#555;">
-
-    <label for="speedSlider">Velocidade do tempo:</label>
-
-    <!-- Controles principais -->
-    <input type="range" id="speedSlider" min="0.1" max="10" step="0.1" value="${speed}" style="width: 100%;">
-    <input type="number" id="speedNumber" min="0.1" max="10" step="0.1" value="${speed}" style="width: 60px;">
-
-    <!-- Atalhos rápidos -->
-    <div style="margin-top:10px;">
-      Opções fixas:
-      <!-- Atribuímos IDs e ouvintes de evento aqui -->
-      <button id="btn-05x">0.5x</button>
-      <button id="btn-1x">1x</button>
-      <button id="btn-2x">2x</button>
-    </div>
-  `;
-  container.appendChild(speedMenu);
-
-  // === Sincronização dos controles de velocidade ===
-  
-  const sliderInput = speedMenu.querySelector("#speedSlider");
-  const numberInput = speedMenu.querySelector("#speedNumber");
-
-  // Atualiza velocidade e sincroniza campos
-  function updateSpeed(newSpeed) {
-      speed = newSpeed;
-      sliderInput.value = newSpeed;
-      numberInput.value = newSpeed;
-  }
-
-  // Inputs manuais
-  sliderInput.addEventListener("input", (e) => updateSpeed(parseFloat(e.target.value)));
-  numberInput.addEventListener("input", (e) => updateSpeed(parseFloat(e.target.value)));
-
-  // Botões de velocidade fixa
-  speedMenu.querySelector("#btn-05x").addEventListener("click", () => updateSpeed(0.5));
-  speedMenu.querySelector("#btn-1x").addEventListener("click", () => updateSpeed(1));
-  speedMenu.querySelector("#btn-2x").addEventListener("click", () => updateSpeed(2));
-
-  // === Ícone de configurações (Engrenagem) ===
-  
-  const settingsIcon = svg.append("g")
-    .attr("transform", "translate(80, 660)")        // Posição próxima ao botão Play/Pause
-    .style("cursor", "pointer")
-    .on("click", (event) => {
-      // Evita fechamento imediato do menu
-      event.stopPropagation(); 
-      speedMenu.style.display = (speedMenu.style.display === "none") ? "block" : "none";
-    });
-
-  // Ícone simples (placeholder visual)
-  settingsIcon.append("rect")
-    .attr("width", 30)
-    .attr("height", 25)
-    .attr("fill", "#555")
-    .attr("rx", 5);
-  
-  settingsIcon.append("text")
-    .attr("x", 15)
-    .attr("y", 17)
-    .attr("fill", "white")
-    .attr("text-anchor", "middle")
-    .attr("dominant-baseline", "middle")
-    .style("font-size", "18px")
-    .text("⚙︎");
+  makeSpeedMenu(container, svg);
 
   // === Lógica principal da animação (com Delta Time) ===
 
@@ -362,7 +395,7 @@ viewof solarSystem = {
 
     if (mutable isRunning) {
       // Atualiza tempo interno da simulação baseado na velocidade
-      animationTime += deltaTime * speed;
+      animationTime += deltaTime * mutable speed;
       
       // === Movimento orbital dos planetas ===
       planetGroups.attr("transform", d => {
@@ -393,14 +426,6 @@ viewof solarSystem = {
 
   // Limpeza automática do timer no Observable
   invalidation.then(() => timer.stop());
-
-  // === Fecha menu quando clica fora ===
-  document.addEventListener("click", (event) => {
-    // Verifica se o clique foi fora do menu e fora do ícone de engrenagem
-    if (!speedMenu.contains(event.target) && !settingsIcon.node().contains(event.target)) {
-      speedMenu.style.display = "none";
-    }
-  });
 
   return container;
 }
