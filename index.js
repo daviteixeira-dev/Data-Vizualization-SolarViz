@@ -251,40 +251,12 @@ makeSpeedMenu = function(container, svg) {
   });
 }
 
-// Célula 13: [Sistema Solar] ==================================================================
+// Célula 13: [Encapsulamento do Sistema Solar] ================================================
 
-viewof solarSystem = {
-
-  // === Estado da animação ===
-  let lastRawElapsed = 0;                   // Armazena o tempo bruto do último frame
-  let speed = 1;                            // Velocidade ajustável
-  let animationTime = 0;                    // Tempo acumulado (independente do timer do D3)
-
-  // === Container principal ===
-  const { container, svg } = makeContainerCell(containerAndDimensions.width, containerAndDimensions.height);
-
-  // === Fundo Estrelado ===
-  makeStarfield(svg, containerAndDimensions.width, containerAndDimensions.height);
-
-  // === Botão Play/Pause ===
-  const {text: buttonText } = makePlayPauseButton(svg, () => {
-    // Acessa e altera a variável 'mutable'
-    mutable isRunning = !mutable isRunning; // Alterna o estado (Play/Pause)
-
-    if (!mutable isRunning) {
-      mutable pauseStart = lastRawElapsed; // Marca início da pausa
-      buttonText.text("Play");
-    } else {
-      // Calcule a duração dessa última pausa e adicione ao total acumulado
-      mutable accumulatedPauseTime += lastRawElapsed - mutable pauseStart;
-      buttonText.text("Pause");
-    }
-  });
-
-  // === Grupo raiz do sistema solar (centralizado) ===
+makeSolarSystem = (svg, planets, moons, scaleOrbits, center) => {
   // Toda a renderização do sistema solar é movida para dentro de um grupo centralizado, facilitando a gestão das coordenadas relativas.
   const systemGroup = svg.append("g")
-    .attr("transform", `translate(${containerAndDimensions.center.x},${containerAndDimensions.center.y})`);
+    .attr("transform", `translate(${center.x},${center.y})`);
 
   // === Sol ===
   systemGroup.append("circle")
@@ -317,7 +289,7 @@ viewof solarSystem = {
     .join("g")
     .attr("class", "planet");
 
-    // === Órbitas das luas (desenhadas dentro do grupo do planeta) ===
+  // === Órbitas das luas (desenhadas dentro do grupo do planeta) ===
     planetGroups.each(function(planetData){
       const planetGroup = d3.select(this);
       const planetMoons = moonsByPlanet.get(planetData.name);
@@ -374,17 +346,48 @@ viewof solarSystem = {
         .append("title")
         .text(d => d.name);
     });
-    // Fim do bloco .each()
+
+  return { planetGroups, moonsByPlanet };
+};
+
+// Célula 14: [Viewof Sistema Solar + Animação] ================================================
+
+viewof solarSystem = {
+
+  // === Estado da animação ===
+  let lastRawElapsed = 0;                   // Armazena o tempo bruto do último frame
+  let animationTime = 0;                    // Tempo acumulado (independente do timer do D3)
+  let lastFrameTime = performance.now();    // Rastreamento do tempo entre frames para suavidade
+
+  // === Container principal ===
+  const { container, svg } = makeContainerCell(containerAndDimensions.width, containerAndDimensions.height);
+
+  // === Fundo Estrelado ===
+  makeStarfield(svg, containerAndDimensions.width, containerAndDimensions.height);
+
+  // === Botão Play/Pause ===
+  const {text: buttonText } = makePlayPauseButton(svg, () => {
+    // Acessa e altera a variável 'mutable'
+    mutable isRunning = !mutable isRunning; // Alterna o estado (Play/Pause)
+
+    if (!mutable isRunning) {
+      mutable pauseStart = lastRawElapsed; // Marca início da pausa
+      buttonText.text("Play");
+    } else {
+      // Calcule a duração dessa última pausa e adicione ao total acumulado
+      mutable accumulatedPauseTime += lastRawElapsed - mutable pauseStart;
+      buttonText.text("Pause");
+    }
+  });
 
   // === Menu de Velocidade (Engrenagem + Controles) ===
   makeSpeedMenu(container, svg);
 
-  // === Lógica principal da animação (com Delta Time) ===
+  // === Criação do sistema solar ===
+  const { planetGroups, moonsByPlanet } = makeSolarSystem(svg, planets, moons, scaleOrbits, containerAndDimensions.center);
 
-  // Rastreamento do tempo entre frames para suavidade
-  let lastFrameTime = performance.now();
-  
-  let timer = d3.timer(rawElapsed => {
+  // === Lógica principal da animação (com Delta Time) ===
+  const timer = d3.timer(rawElapsed => {
     // Mantém o último tempo bruto para lógica de pausa/play
     lastRawElapsed = rawElapsed;
 
