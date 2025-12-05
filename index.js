@@ -289,37 +289,71 @@ makeSolarSystem = (svg, planets, moons, scaleOrbits, center) => {
     .join("g")
     .attr("class", "planet");
 
-  function addSaturnRings(planetGroup, planetData) {
-    if (planetData.name !== "Saturno") return;
+  // === Função que adiciona anéis a um planeta ===
+  function addPlanetRings(planetGroup, planetData) {
+    
+    const hasRings = ["Júpiter", "Saturno", "Urano", "Netuno"].includes(planetData.name);
+    if (!hasRings) return; // Se não for um desses, sai da função.
 
-    const baseColor = d3.color(planetData.color).darker(0.5); // Cor base marrom/bege 
-    const numRings = 4; // Número de faixas a serem desenhadas
+    // Definimos raios internos e externos fictícios para os anéis, a inclinação, número e cor dos anéis
+    let innerRadius, outerRadius, inclination, numRings, baseColor;
 
-    // Definimos raios internos e externos fictícios para os anéis
-    const innerRadius = planetData.radius + 2; 
-    const outerRadius = planetData.radius + 10;
+    switch(planetData.name){
+      case "Júpiter":
+        // Anéis finos e próximos ao planeta
+        innerRadius = planetData.radius + 0.5;
+        outerRadius = planetData.radius + 3;
+        numRings = 2;
+        baseColor = d3.color(planetData.color).darker(1.5);
+        inclination = 0; // Júpter tem pouca inclinação visível
+        break;
+      case "Urano":
+        // Anéis distintos e o planeta é inclinado (98 graus!)
+        innerRadius = planetData.radius + 1;
+        outerRadius = planetData.radius + 6;
+        numRings = 3;
+        baseColor = d3.color(planetData.color).darker(0.5);
+        inclination = 90; // Visto de "lado"
+        break;
+      case "Netuno":
+        // Anéis tênues e fragmentados
+        innerRadius = planetData.radius + 0.5;
+        outerRadius = planetData.radius + 4;
+        numRings = 2;
+        baseColor = d3.color(planetData.color).darker(0.5);
+        inclination = 28;
+        break;
+      case "Saturno":
+        // Anéis proeminentes
+        innerRadius = planetData.radius + 2;
+        outerRadius = planetData.radius + 10;
+        numRings = 4;
+        baseColor = d3.color(planetData.color).darker(0.5);
+        inclination = 90; // Para visualização de "lado"
+        break;
+    }
 
     // Gera os dados para as múltiplas faixas dos anéis
     const ringsData = d3.range(numRings).map(i => {
-      const t = i / (numRings - 1); // Normaliza o índice entre 0 e 1
+      const t = i / (numRings - 1 || 1); // Normaliza o índice entre 0 e 1 e garante divisão por 1 se numRings for 1 ou 2
       return {
         inner: innerRadius + t * (outerRadius - innerRadius),
         outer: innerRadius + (t + 1/numRings) * (outerRadius - innerRadius),
         // Varia a cor e opacidade levemente para dar textura
         color: baseColor.brighter(t * 1.5), 
-        opacity: 0.2 + t * 0.6 // Anéis externos mais opacos
+        opacity: 0.3 + t * 0.5 // Anéis externos mais opacos
       };
     });
 
     // Cria um grupo para todos os anéis e aplica a inclinação
     const ringsGroup = planetGroup.append("g")
-      .attr("class", "saturn-rings-group")
-      .attr("transform", "rotate(90, 0, 0)"); // Inclina o conjunto inteiro
+      .attr("class", "planet-rings-group")
+      .attr("transform", `rotate(${inclination}, 0, 0)`); // Aplica a inclinação correta
 
-    ringsGroup.selectAll("path.saturn-ring-segment")
+    ringsGroup.selectAll("path.planet-ring-segment")
       .data(ringsData)
       .join("path")
-      .attr("class", "saturn-ring-segment")
+      .attr("class", "planet-ring-segment")
       .attr("d", d => {
         // Gerador de arco para cada segmento
         return d3.arc()
@@ -355,11 +389,15 @@ makeSolarSystem = (svg, planets, moons, scaleOrbits, center) => {
     planetGroups.each(function(planetData) {
       const planetGroup = d3.select(this);
 
-      // Adiciona os anéis se for Saturno
-      addSaturnRings(planetGroup, planetData);
+      // Este grupo interno rotacionará com a inclinação axial, mas a animação orbital 
+      // na Célula 16 atuará no grupo PAI (`planetGroup`).
+      const planetInnerGroup = planetGroup.append("g").attr("class", "planet-inner-group");
 
-      // Planeta
-      planetGroup.append("circle")
+      // Chamamos a função para adicionar anéis a este grupo interno
+      addPlanetRings(planetInnerGroup, planetData);
+
+      // Planeta (círculo) desenhado DENTRO do grupo interno
+      planetInnerGroup.append("circle")
         .attr("class", "planet-circle")
         .style("cursor", "pointer")
         .attr("r", d => d.radius)
@@ -371,13 +409,13 @@ makeSolarSystem = (svg, planets, moons, scaleOrbits, center) => {
         .append("title")
         .text(d => d.name);
 
-      // Luas
+      // Luas (se existirem) - também adicionadas ao grupo interno para herdar a inclinação
       const planetMoons = moonsByPlanet.get(planetData.name);
 
       if (!planetMoons) return;                   // planeta sem luas → ignora
 
       // Cria grupo para as luas
-      const moonGroups = planetGroup.selectAll("g.moon")
+      const moonGroups = planetInnerGroup.selectAll("g.moon")
         .data(planetMoons)
         .join("g")
         .attr("class", "moon");
