@@ -160,7 +160,7 @@ export default async function handler(req, res) {
 
     const out = {
       body: canonical,
-      time: startTimeParam,
+      time: startStr,
       position,
       meta: {
         generated_at: nowIso(),
