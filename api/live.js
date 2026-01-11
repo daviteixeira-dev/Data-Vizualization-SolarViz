@@ -13,12 +13,17 @@ const HORIZONS_CMD = {
   Mercury: '199',
   Venus: '299',
   Earth: '399',
-  Moon: '301',       // sometimes Moon is 301
+  Moon: '301',
   Mars: '499',
   Jupiter: '599',
   Saturn: '699',
   Uranus: '799',
-  Neptune: '899'
+  Neptune: '899',
+  Io: '501', 
+  Europa: '502',
+  Ganymede: '503',
+  Callisto: '504',
+  Titan: '606'
 };
 
 function nowIso() {
