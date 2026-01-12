@@ -375,7 +375,9 @@ makeSolarSystem = (svg, planets, moons, scaleOrbits, center, onClickHandler) => 
 
   // === Órbitas das luas (desenhadas dentro do grupo do planeta) ===
     planetGroups.each(function(planetData){
+      
       const planetGroup = d3.select(this);
+      
       const planetMoons = moonsByPlanet.get(planetData.name);
       if (!planetMoons) return;
 
@@ -639,9 +641,6 @@ viewof solarSystem = {
     mutable isLiveMode = !mutable isLiveMode;
 
     if (mutable isLiveMode) {
-      // Pausa simulação
-      //mutable isRunning = false;
-      //buttonText.text("Play");
 
       liveStatusText.text("Carregando..."); // <-- Mostra o carregando
 
@@ -670,9 +669,6 @@ viewof solarSystem = {
       liveInterval = null;
       liveStatusText.text("Simulação Ativa"); // <-- Limpa o status
       liveStatusText.attr("fill", "gray");
-
-      //mutable isRunning = true;
-      //buttonText.text("Pause");
     }
   });
 
@@ -744,37 +740,17 @@ viewof solarSystem = {
     transitionSelection.attr("transform", d => {
 
       let x, y;
-      
-      if(mutable isLiveMode){
+
+      // Adiciona verificação para mutable livePositions e para o planeta específico (d.name)
+      if(mutable isLiveMode && mutable livePositions && mutable livePositions[d.name]){
         const live = mutable livePositions[d.name];
-
-        // Se a posição live não existir (falha no fetch ou ainda carregando), 
-        // usamos a posição de simulação como fallback temporário.
-
-        if(!live) {
-          // Fallback para a posição da simulação se o LIVE falhar
-          const angle = (animationTime / (d.period * 100)) * 2 * Math.PI;
-          const orbitRadius = scaleOrbits.planetScale(d.orbit);
-          x = orbitRadius * Math.cos(angle);
-          y = orbitRadius * Math.sin(angle);
-          
-        }else{
-          // A função projectLivePosition já retorna {x, y} escalonados
-          const pos = projectLivePosition(live);
-  
-          x = pos.x;
-          y = pos.y;
-        }
-        
-      } else {
-        // Modo Simulação: cálculo manual baseado no tempo
+        const pos = projectLivePosition(live);
+        x = pos.x;
+        y = pos.y;
+      }else{
+        // Fallback para simulação matemática (incluindo Mercúrio, se o LIVE falhar)
         const angle = (animationTime / (d.period * 100)) * 2 * Math.PI;
         const orbitRadius = scaleOrbits.planetScale(d.orbit);
-        
-        // Rotaciona primeiro em torno do Sol (origem), depois translada para a distância orbital.
-        //return `rotate(${angle * 180 / Math.PI}) translate(${orbitRadius}, 0)`;
-
-        // Para manter consistência com o modo Live, calculamos x e y manualmente
         x = orbitRadius * Math.cos(angle);
         y = orbitRadius * Math.sin(angle);
       }
@@ -787,9 +763,41 @@ viewof solarSystem = {
     planetGroups.each(function(planetData) {
       const planetMoons = moonsByPlanet.get(planetData.name);
       if (!planetMoons) return;
+      
       d3.select(this).selectAll("g.moon").attr("transform", d => {
+
+        // Identifica o nome do planeta pai (ex: "Terra", "Júpiter")
+        const parentPlanetName = d.planet;
+
+        // Verifica se estamos no modo LIVE e se temos os dados da Lua E do Planeta Pai
+        if (mutable isLiveMode && mutable livePositions[d.name] && mutable livePositions[parentPlanetName]) {
+          
+          const liveMoonSun = mutable livePositions[d.name];
+          const liveParentSun = mutable livePositions[parentPlanetName];
+          
+          // 1. Calcular a posição da Lua relativa ao Planeta Pai (em KM)
+          const moonRelX = liveMoonSun.x - liveParentSun.x;
+          const moonRelY = liveMoonSun.y - liveParentSun.y;
+
+          // 2. Calcular a distância (raio) e o ângulo relativos
+          const rKM = Math.sqrt(moonRelX ** 2 + moonRelY ** 2);
+          const angle = Math.atan2(moonRelY, moonRelX);
+        
+          // 3. Usamos a sua escala de luas definida na Célula 4
+          const scaledR = scaleOrbits.moonScale(rKM);
+
+          // 4. Transformar em coordenadas X, Y escalonadas
+          const x = scaledR * Math.cos(angle);
+          const y = scaledR * Math.sin(angle);
+
+          // Aplicar a translação local
+          return `translate(${x}, ${y})`;
+        }
+
+        // FALLBACK: Simulação matemática para quaisquer luas se o LIVE falhar
         const moonAngle = (time / (d.period * 50)) * 2 * Math.PI;
         const moonOrbitRadius = scaleOrbits.moonScale(d.orbit);
+        
         // Rotaciona primeiro em torno do Planeta (origem local), depois translada para a distância orbital.
         return `rotate(${moonAngle * 180 / Math.PI}) translate(${moonOrbitRadius}, 0)`;
       });
@@ -895,18 +903,20 @@ mutable isLiveMode = false;
 // Célula 17.2: [Cache local das posições LIVE] ==============================================
 mutable livePositions = {};
 
-// Célula 18: [Fetch LIVE para TODOS os planetas] ============================================
+// Célula 18: [Fetch LIVE para TODOS os corpos] ============================================
 
 async function fetchAllLivePositions(setStatus = () => {}) {
 
   setStatus("Carregando..."); // Define o status inicial 
   
-  const planetNames = [
+  const bodies = [
     "Mercury","Venus","Earth","Mars",
-    "Jupiter","Saturn","Uranus","Neptune"
+    "Jupiter","Saturn","Uranus","Neptune",
+    "Moon", "Io", "Europa", "Ganymede",
+    "Callisto", "Titan"
   ];
 
-  const requests = planetNames.map(p =>
+  const requests = bodies.map(p =>
     fetch(`https://data-visualization-solar-viz.vercel.app/api/live?body=${p}`)
       .then(r => r.json())
       .then(j => ({ name: p, data: j }))
@@ -919,15 +929,14 @@ async function fetchAllLivePositions(setStatus = () => {}) {
 
   const nameMap = {
     "Mercury": "Mercúrio", "Venus": "Vênus", "Earth": "Terra", "Mars": "Marte",
-    "Jupiter": "Júpiter", "Saturn": "Saturno", "Uranus": "Urano", "Neptune": "Netuno"
+    "Jupiter": "Júpiter", "Saturn": "Saturno", "Uranus": "Urano", "Neptune": "Netuno",
+    "Moon": "Lua", "Io": "Io", "Europa": "Europa", "Ganymede": "Ganimedes", "Callisto": "Calisto",
+    "Titan": "Titã"
   };
   
   for (const r of results) {
     if (!r || !r.data?.position) continue;
-
-    //const { x_km, y_km } = r.data.position;
-
-    const ptName = nameMap[r.name]; // Converte para o nome usado no seu array planets
+    const ptName = nameMap[r.name]; // Converte para o nome usado no array bodies
 
     // Projeção simples heliocêntrica 2D
     positions[ptName] = {
@@ -938,10 +947,10 @@ async function fetchAllLivePositions(setStatus = () => {}) {
 
   // Verificação de sucesso para o status
   const fetchedCount = Object.keys(positions).length;
-  if (fetchedCount === planetNames.length) {
+  if (fetchedCount === bodies.length) {
       setStatus("Sucesso!");
   } else {
-      setStatus(`Erro: ${fetchedCount} planetas carregados.`);
+      setStatus(`Erro: ${fetchedCount} corpos carregados.`);
   }
 
   return positions;
