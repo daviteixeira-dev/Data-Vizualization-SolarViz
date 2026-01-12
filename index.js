@@ -5,15 +5,15 @@ d3 = require("d3@6")
 // Célula 2: [Planetas] ========================================================================
 
 planets = [
-  { name: "Mercúrio", color: "#b1b1b1", radius: 3, orbit: 58e6, period: 88 },
-  { name: "Vênus", color: "#e0b55b", radius: 5, orbit: 108e6, period: 225 },
-  { name: "Terra", color: "#4fa3ff", radius: 5, orbit: 150e6, period: 365 },
-  { name: "Marte", color: "#d14f2b", radius: 4, orbit: 228e6, period: 687 },
-  { name: "Júpiter", color: "#c79c5e", radius: 10, orbit: 778e6, period: 4333 },
-  { name: "Saturno", color: "#e3d8a1", radius: 8, orbit: 1427e6, period: 10759 },
-  { name: "Urano", color: "#9be8ff", radius: 7, orbit: 2871e6, period: 30687 },
-  { name: "Netuno", color: "#4978ff", radius: 7, orbit: 4495e6, period: 60190 }
-]
+  { name: "Mercúrio", color: "#b1b1b1", radius: 3, orbit: 58e6, period: 88, e: 0.2056, i: 7.00, p_arg: 252.25 },
+  { name: "Vênus", color: "#e0b55b", radius: 5, orbit: 108e6, period: 225, e: 0.0068, i: 3.39, p_arg: 181.98 },
+  { name: "Terra", color: "#4fa3ff", radius: 5, orbit: 150e6, period: 365, e: 0.0167, i: 0.00, p_arg: 102.95 },
+  { name: "Marte", color: "#d14f2b", radius: 4, orbit: 228e6, period: 687, e: 0.0934, i: 1.85, p_arg: 336.04 },
+  { name: "Júpiter", color: "#c79c5e", radius: 10, orbit: 778e6, period: 4333, e: 0.0484, i: 1.31, p_arg: 14.75 },
+  { name: "Saturno", color: "#e3d8a1", radius: 8, orbit: 1427e6, period: 10759, e: 0.0542, i: 2.48, p_arg: 92.59 },
+  { name: "Urano", color: "#9be8ff", radius: 7, orbit: 2871e6, period: 30687, e: 0.0472, i: 0.77, p_arg: 170.96 },
+  { name: "Netuno", color: "#4978ff", radius: 7, orbit: 4495e6, period: 60190, e: 0.0086, i: 1.77, p_arg: 44.97 }
+];
 
 // Célula 3: [Luas] ============================================================================
 
@@ -275,17 +275,31 @@ makeSolarSystem = (svg, planets, moons, scaleOrbits, center, onClickHandler) => 
     .append("title")
     .text("Sol");
 
-  // === Órbitas dos planetas (estáticas) ===
-  systemGroup.selectAll("circle.orbit-sun")
+  // === Órbitas dos planetas (elipses reais usando <ellipse>) ===
+  systemGroup.selectAll("ellipse.orbit-sun")
     .data(planets)
-    .join("circle")
+    .join("ellipse") // Usando o elemento ellipse do SVG
     .attr("class", "orbit-sun")
-    .attr("cx", 0) 
-    .attr("cy", 0)
-    .attr("r", d => scaleOrbits.planetScale(d.orbit))
     .attr("fill", "none")
     .attr("stroke", "rgba(255,255,255,0.2)")
-    .attr("stroke-dasharray", "2,2");
+    .attr("stroke-dasharray", "2,2")
+    .attr("rx", d => { // Raio X (semieixo maior 'a')
+      return scaleOrbits.planetScale(d.orbit);
+    })
+    .attr("ry", d => { // Raio Y (semieixo menor 'b')
+      const a_scaled = scaleOrbits.planetScale(d.orbit); 
+      return a_scaled * Math.sqrt(1 - d.e ** 2);
+    })
+    .attr("cx", d => { // Centro X da elipse (deslocado para o foco 'c')
+        const a_scaled = scaleOrbits.planetScale(d.orbit); 
+        const c_scaled = a_scaled * d.e;
+        return -c_scaled; // Deslocamos para a esquerda para que o Sol (0,0) fique no foco
+    })
+    .attr("cy", 0) // Centro Y da elipse
+    .attr("transform", d => { // Aplica a rotação da órbita
+      // Rotaciona a elipse inteira em torno do Sol (0,0) pelo ângulo do periélio
+      return `rotate(${d.p_arg} 0 0)`; 
+    });
 
   // === Agrupamento das luas por planeta ===
   const moonsByPlanet = d3.group(moons, d => d.planet);
@@ -584,6 +598,7 @@ viewof solarSystem = {
   // === Projeção das escalas ===
   const projectLivePosition = (pos) => {
     // 1. Calcula a distância real (Pitágoras) em KM a partir dos dados da API
+    // Ignoramos a inclinação Z e projetamos tudo no plano XY
     const r = Math.sqrt(pos.x * pos.x + pos.y * pos.y);
   
     // 2. USA A MESMA planetScale da Célula 4 para escalonar a distância real
@@ -744,9 +759,11 @@ viewof solarSystem = {
       // Adiciona verificação para mutable livePositions e para o planeta específico (d.name)
       if(mutable isLiveMode && mutable livePositions && mutable livePositions[d.name]){
         const live = mutable livePositions[d.name];
+        
         const pos = projectLivePosition(live);
         x = pos.x;
         y = pos.y;
+        
       }else{
         // Fallback para simulação matemática (incluindo Mercúrio, se o LIVE falhar)
         const angle = (animationTime / (d.period * 100)) * 2 * Math.PI;
