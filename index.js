@@ -652,11 +652,11 @@ viewof solarSystem = {
   };
 
   // === Botão de Ativar LIVE ===
-  makeLiveButton(svg, async () => {
+  const { statusIndicator } = makeLiveButton(svg, async () => { // <--- Captura o statusIndicator
     mutable isLiveMode = !mutable isLiveMode;
 
     if (mutable isLiveMode) {
-
+      statusIndicator.attr("fill", "yellow"); // <--- Amarelo: Carregando
       liveStatusText.text("Carregando..."); // <-- Mostra o carregando
 
       // Buscamos a posição atual imediatamente
@@ -665,16 +665,21 @@ viewof solarSystem = {
         liveStatusText.text(status); // <-- Atualiza o texto com o resultado
         if (status.includes("Erro")) {
           liveStatusText.attr("fill", "red");
+          statusIndicator.attr("fill", "red"); // <--- Vermelho: Erro
         } else {
           liveStatusText.attr("fill", "lightgreen");
+          statusIndicator.attr("fill", "green"); // <--- Verde: Ativo
         }
       });
 
       // Configura a atualização periódica (15s)
       liveInterval = setInterval(async () => {
         liveStatusText.text("Atualizando...");
+        statusIndicator.attr("fill", "yellow"); // <--- Amarelo: Atualizando
+        
         mutable livePositions = await fetchAllLivePositions(status => {
           liveStatusText.text("LIVE Ativo: " + status.toLowerCase().replace("sucesso!", "dados atualizados."));
+          statusIndicator.attr("fill", "green"); // <--- Verde: Ativo
         });
       }, 15000);
 
@@ -684,6 +689,7 @@ viewof solarSystem = {
       liveInterval = null;
       liveStatusText.text("Simulação Ativa"); // <-- Limpa o status
       liveStatusText.attr("fill", "gray");
+      statusIndicator.attr("fill", "red"); // <--- Vermelho: Inativo
     }
   });
 
@@ -719,8 +725,21 @@ viewof solarSystem = {
       // Chamamos a função do painel diretamente aqui no click:
       updateInfoPanel(mutable selectedObject); // Abre o painel
 
-      // CÁLCULO DE ZOOM: Usa a função getObjectPosition para obter a coordenada exata
-      const {x: targetX, y: targetY} = getObjectPosition(mutable selectedObject, animationTime);
+      // --- LÓGICA DO ZOOM ---
+      let targetX, targetY;
+
+      if (mutable isLiveMode && mutable livePositions && mutable livePositions[d.name]){
+        // Se estiver em LIVE, use a posição REAL (eixo X/Y) e a função de projeção
+        const livePos = mutable livePositions[d.name];
+        const projectedPos = projectLivePosition(livePos);
+        targetX = projectedPos.x;
+        targetY = projectedPos.y;
+      } else {
+        // Fallback para SIMULAÇÃO matemática ou se o LIVE não estiver pronto
+        const pos = getObjectPosition(mutable selectedObject, animationTime);
+        targetX = pos.x;
+        targetY = pos.y;
+      }
 
       const scale = 5; // Fator de zoom fixo para todos os objetos
 
@@ -981,12 +1000,14 @@ makeLiveButton = function(svg, onToggle){
     .style("cursor","pointer")
     .on("click", onToggle);
 
+  // Fundo do botão (agora neutro, a cor do status é o indicador)
   g.append("rect")
-    .attr("width", 55)
+    .attr("width", 60)
     .attr("height", 25)
-    .attr("fill", "#8b0000")
+    .attr("fill", "#333") // Cor de fundo escura
     .attr("rx", 5);
 
+  // Texto "LIVE"
   const text = g.append("text")
     .attr("x", 27)
     .attr("y", 17)
@@ -994,5 +1015,13 @@ makeLiveButton = function(svg, onToggle){
     .attr("text-anchor","middle")
     .text("LIVE");
 
-  return { g, text };
+  // === NOVO: Círculo de Status (Inicialmente Vermelho - Inativo) ===
+  const statusIndicator = g.append("circle")
+    .attr("cx", 55) // Posição à direita do texto
+    .attr("cy", 7)  // Posição superior
+    .attr("r", 4)   // Tamanho do círculo
+    .attr("fill", "red"); // Cor inicial: Inativo
+
+  // Retornamos a referência ao indicador para uso externo
+  return { g, text, statusIndicator };
 };
