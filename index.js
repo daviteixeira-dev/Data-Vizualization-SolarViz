@@ -1,8 +1,8 @@
-// Célula 1: ===================================================================================
+// Célula 01: =================================================================================
 
 d3 = require("d3@6")
 
-// Célula 2: [Planetas] ========================================================================
+// Célula 02: [Planetas] ======================================================================
 
 planets = [
   { name: "Mercúrio", color: "#b1b1b1", radius: 3, orbit: 58e6, period: 88, e: 0.2056, i: 7.00, p_arg: 252.25 },
@@ -15,7 +15,7 @@ planets = [
   { name: "Netuno", color: "#4978ff", radius: 7, orbit: 4495e6, period: 60190, e: 0.0086, i: 1.77, p_arg: 44.97 }
 ];
 
-// Célula 3: [Luas] ============================================================================
+// Célula 03: [Luas] ==========================================================================
 
 moons = [
   // Lua da Terra
@@ -31,9 +31,8 @@ moons = [
   { name: "Titã", planet: "Saturno", radius: 3, orbit: 1221870, period: 15.9 }
 ]
 
-// Célula 4: [Escala das orbitas dos planetas e das luas] ======================================
+// Célula 04: [Escala das orbitas dos planetas e das luas] ====================================
 scaleOrbits = {
-
   // Usamos um domínio fixo e robusto que cobre todos os planetas (em KM, de Mercúrio a Netuno)
   const minOrbitKM = 5e7; // ~50 milhões km (Mercúrio)
   const maxOrbitKM = 4.5e9; // ~4.5 bilhões km (Netuno)
@@ -49,19 +48,21 @@ scaleOrbits = {
   return { planetScale, moonScale };
 }
 
-// Célula 5: [Variáveis de estado da animação] =================================================
+// Célula 5: [Variáveis de estado da animação] ================================================
 
-mutable isRunning = true;                     // Controla reprodução (play/pause)
+// Célula 05.1: [Controle de reprodução (play/pause)] =========================================
 
-// Célula 6
+mutable isRunning = true;
 
-mutable pauseStart = 0;                       // Timestamp do início da pausa
+// Célula 05.2: [Timestamp do início da pausa] ================================================
 
-// Célula 7
+mutable pauseStart = 0;
 
-mutable accumulatedPauseTime = 0;             // Soma de pausas anteriores
+// Célula 05.3: [Soma de pausas anteriores] ===================================================
 
-// Célula 8: [Container e dimensões] ===========================================================
+mutable accumulatedPauseTime = 0;
+
+// Célula 06: [Container e dimensões] =========================================================
 
 containerAndDimensions = {
   // === Dimensões e ponto central da cena ===
@@ -72,7 +73,7 @@ containerAndDimensions = {
   return { width, height, center };
 }
 
-// Célula 9: [Criação do Container + SVG] ======================================================
+// Célula 07: [Criação do Container + SVG] ====================================================
 
 // === Container principal ===
 makeContainerCell = function(width, height) {
@@ -90,7 +91,7 @@ makeContainerCell = function(width, height) {
   return { container, svg: d3.select(svg) };
 }
 
-// Célula 10: [Fundo Estrelado] ================================================================
+// Célula 08: [Fundo Estrelado] ===============================================================
 
 // === Fundo Estrelado ===
 makeStarfield = function(svg, width, height, n = 300) {
@@ -113,7 +114,7 @@ makeStarfield = function(svg, width, height, n = 300) {
   return { stars, svg }
 }
 
-// Célula 11: [Botão Play/Pause] ===============================================================
+// Célula 09: [Botão Play/Pause] ==============================================================
 
 // === Botão Play/Pause ===
 makePlayPauseButton = function(svg, onToggle) {
@@ -141,13 +142,13 @@ makePlayPauseButton = function(svg, onToggle) {
   return { group, text };
 }
 
-// Célula 12: [Menu de Velocidade] =============================================================
+// Célula 10: [Menu de Velocidade] ============================================================
 
-// Célula 12.1
+// Célula 10.1: [Variável de Velocidade] ======================================================
 
 mutable speed = 1;
 
-// Célula 12.2
+// Célula 10.2: [Controles] ===================================================================
 
 // === Menu de Velocidade (Engrenagem + Controles) ===
 makeSpeedMenu = function(container, svg) {
@@ -256,7 +257,7 @@ makeSpeedMenu = function(container, svg) {
   });
 }
 
-// Célula 13: [Encapsulamento do Sistema Solar] ================================================
+// Célula 11: [Encapsulamento do Sistema Solar] ===============================================
 
 makeSolarSystem = (svg, planets, moons, scaleOrbits, center, onClickHandler) => {
   // Toda a renderização do sistema solar é movida para dentro de um grupo centralizado, facilitando a gestão das coordenadas relativas.
@@ -461,21 +462,20 @@ makeSolarSystem = (svg, planets, moons, scaleOrbits, center, onClickHandler) => 
   return { planetGroups, moonsByPlanet, systemGroup };
 };
 
-// Célula 14: [Geração dos dados para os asteroides] ===========================================
+// Célula 12: [Geração dos dados para os asteroides] ==========================================
 
 asteroidBeltData = {
   // Define os raios orbitais de Marte e Júpiter (use os valores dos seus dados)
-  const marsOrbitRadius = scaleOrbits.planetScale(planets.find(p => p.name === "Marte").orbit);
-  const jupiterOrbitRadius = scaleOrbits.planetScale(planets.find(p => p.name === "Júpiter").orbit);
+  const marsOrbitKM = planets.find(p => p.name === "Marte").orbit;
+  const jupiterOrbitKM = planets.find(p => p.name === "Júpiter").orbit;
 
-  // Define a faixa de órbita para os asteroides
-  const minOrbitRadius = marsOrbitRadius + 20; // Pouco depois de Marte
-  const maxOrbitRadius = jupiterOrbitRadius - 20; // Pouco antes de Júpiter
-  
-  // Gera os asteroides aleatoriamente
+  // Define a faixa de órbita em KM (valores reais)
+  const minOrbitKM = marsOrbitKM + 1e7; 
+  const maxOrbitKM = jupiterOrbitKM - 1e7; 
+
   const numAsteroids = 1000;
   const asteroids = d3.range(numAsteroids).map(() => ({
-    orbit: d3.randomUniform(minOrbitRadius, maxOrbitRadius)(),
+    orbit_km: d3.randomUniform(minOrbitKM, maxOrbitKM)(), // Armazena a distância REAL
     angle: d3.randomUniform(0, 2 * Math.PI)(),
     speed: d3.randomUniform(0.5, 2.0)(),
     radius: d3.randomUniform(0.2, 1.5)()
@@ -484,7 +484,7 @@ asteroidBeltData = {
   return asteroids;
 }
 
-// Célula 15: [Renderização dos asteroides] ====================================================
+// Célula 13: [Renderização dos asteroides] ===================================================
 
 makeAsteroidBelt = (systemGroup, asteroids) => {
   // Cria um grupo de elementos (g) para cada asteroide.
@@ -505,13 +505,72 @@ makeAsteroidBelt = (systemGroup, asteroids) => {
   return asteroidGroups;
 }
 
-// Célula 16: [Viewof Sistema Solar + Animação] ================================================
+// Célula 14: [Carregar Elementos Orbitais do GitHub] =========================================
+
+async function fetchStaticOrbits() {
+  const url = "https://raw.githubusercontent.com/daviteixeira-dev/Data-Visualization-SolarViz/main/data/planets_static.json";
+  return fetch(url).then(r => r.json());
+}
+
+// Célula 14.1: [Cache dos Elementos Orbitais] ================================================
+
+mutable staticOrbits = null;
+
+// Célula 15: [Funções Orbitais Auxiliares] ===================================================
+
+auxiliaryOrbitalFunctions = {
+  function deg2rad(d) {
+    return d * Math.PI / 180;
+  }
+  
+  function solveKepler(M, e, tol = 1e-6) {
+    let E = M;
+    let delta = 1;
+  
+    while (Math.abs(delta) > tol) {
+      delta = (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+      E -= delta;
+    }
+  
+    return E;
+  }
+  
+  function orbitalElementsToXY(el, timeDays = 0) {
+    const {
+      a_AU,
+      eccentricity: e,
+      M_deg,
+      period_days
+    } = el;
+  
+    const n = 2 * Math.PI / period_days;
+    const M = deg2rad(M_deg) + n * timeDays;
+    const E = solveKepler(M, e);
+  
+    const x = a_AU * (Math.cos(E) - e);
+    const y = a_AU * Math.sqrt(1 - e * e) * Math.sin(E);
+  
+    return { x, y };
+  }
+
+  return { orbitalElementsToXY };
+}
+
+// Célula 15.1: [Tempo atual da animação] =====================================================
+
+mutable currentAnimationTime = 0;
+
+// Célula 16: [Viewof Sistema Solar + Animação] ===============================================
 
 viewof solarSystem = {
 
+  // === Carrega dados STATIC uma vez ===
+  if (!mutable staticOrbits) {
+    mutable staticOrbits = await fetchStaticOrbits();
+  }
+
   // === Estado da animação ===
   let lastRawElapsed = 0;                   // Armazena o tempo bruto do último frame
-  let animationTime = 0;                    // Tempo acumulado (independente do timer do D3)
   let lastFrameTime = performance.now();    // Rastreamento do tempo entre frames para suavidade
 
   let liveInterval = null;
@@ -529,6 +588,7 @@ viewof solarSystem = {
   // === Função para fechar painel e resetar visualização ===
   const closePanelAndResetView = () => {
     mutable selectedObject = null; // Reseta o estado de seleção
+    
     // Aplica a transição de volta ao normal (scale 1, no centro original)
     systemGroup.transition()
       .duration(800)
@@ -728,17 +788,26 @@ viewof solarSystem = {
       // --- LÓGICA DO ZOOM ---
       let targetX, targetY;
 
-      if (mutable isLiveMode && mutable livePositions && mutable livePositions[d.name]){
+      if(mutable isLiveMode && mutable livePositions?.[d.name]){
         // Se estiver em LIVE, use a posição REAL (eixo X/Y) e a função de projeção
         const livePos = mutable livePositions[d.name];
         const projectedPos = projectLivePosition(livePos);
         targetX = projectedPos.x;
         targetY = projectedPos.y;
+        
+      } else if(mutable staticOrbits?.planets?.[d.name]){
+        // SE ESTIVER NO MODO ESTÁTICO (GitHub), use a mesma conta Kepler do updatePositions
+        const el = mutable staticOrbits.planets[d.name];
+        const posAU = auxiliaryOrbitalFunctions.orbitalElementsToXY(el, mutable currentAnimationTime / 100);
+        const AU_TO_KM = 149597870;
+        const rKM = Math.sqrt((posAU.x * AU_TO_KM)**2 + (posAU.y * AU_TO_KM)**2);
+        const angleRad = Math.atan2(posAU.y, posAU.x);
+        const pos = calculateXY(rKM, angleRad, scaleOrbits.planetScale);
+        targetX = pos.x; targetY = pos.y;
       } else {
-        // Fallback para SIMULAÇÃO matemática ou se o LIVE não estiver pronto
-        const pos = getObjectPosition(mutable selectedObject, animationTime);
-        targetX = pos.x;
-        targetY = pos.y;
+        // Fallback para Sol ou simulação básica
+        const pos = getObjectPosition(d, mutable currentAnimationTime);
+        targetX = pos.x; targetY = pos.y;
       }
 
       const scale = 5; // Fator de zoom fixo para todos os objetos
@@ -759,6 +828,15 @@ viewof solarSystem = {
   // Chama a função para criar o cinturão de asteroides
   const asteroidGroups = makeAsteroidBelt(systemGroup, asteroidBeltData);
 
+  // === Função auxiliar para converter distância radial para X/Y usando a escala LOG ===
+  const calculateXY = (distanceKM, angleRad, scaleFunc) => {
+      const scaledR = scaleFunc(distanceKM);
+      return {
+          x: scaledR * Math.cos(angleRad),
+          y: scaledR * Math.sin(angleRad)
+      };
+  };
+
   // Função de atualização da posição dos elementos (chamada inicial e no timer)
   const updatePositions = (time) => {
     
@@ -775,20 +853,51 @@ viewof solarSystem = {
 
       let x, y;
 
-      // Adiciona verificação para mutable livePositions e para o planeta específico (d.name)
-      if(mutable isLiveMode && mutable livePositions && mutable livePositions[d.name]){
-        const live = mutable livePositions[d.name];
+      // === 1. LIVE (backend) ===
+      if(mutable isLiveMode && mutable livePositions?.[d.name]){
+
+        const posKM = mutable livePositions[d.name]; // Posição X/Y em KM
+
+        const rKM = Math.sqrt(posKM.x * posKM.x + posKM.y * posKM.y);
+
+        const angleRad = Math.atan2(posKM.y, posKM.x);
         
-        const pos = projectLivePosition(live);
+        const pos = calculateXY(rKM, angleRad, scaleOrbits.planetScale);
         x = pos.x;
         y = pos.y;
+
+      // === 2. STATIC (GitHub JSON) === 
+      } else if(mutable staticOrbits && mutable staticOrbits.planets?.[d.name]){
+
+        // Acessa o objeto do planeta usando a chave correta
+        const el = mutable staticOrbits.planets[d.name];
         
+        // Calcula posição orbital em AU (Unidades Astronômicas)
+        const posAU = auxiliaryOrbitalFunctions.orbitalElementsToXY(
+          el,
+          mutable currentAnimationTime / 100 // Ajuste o divisor para a velocidade da simulação
+        );
+    
+        // CONVERTE DE AU PARA KM (1 AU = ~149.6 milhões de KM)
+        const AU_TO_KM = 149597870;
+        const x_km = posAU.x * AU_TO_KM;
+        const y_km = posAU.y * AU_TO_KM;
+
+        const rKM = Math.sqrt(x_km * x_km + y_km * y_km);
+        const angleRad = Math.atan2(y_km, x_km);
+        
+        const pos = calculateXY(rKM, angleRad, scaleOrbits.planetScale);
+        x = pos.x;
+        y = pos.y;
+
+      // === 3. Fallback matemático (se o LIVE falhar) ===
       }else{
-        // Fallback para simulação matemática (incluindo Mercúrio, se o LIVE falhar)
-        const angle = (animationTime / (d.period * 100)) * 2 * Math.PI;
-        const orbitRadius = scaleOrbits.planetScale(d.orbit);
-        x = orbitRadius * Math.cos(angle);
-        y = orbitRadius * Math.sin(angle);
+        const angleRad = (mutable currentAnimationTime / (d.period * 100)) * 2 * Math.PI;
+        const orbitRadiusKM = d.orbit; // Valor em KM do array original
+        
+        const pos = calculateXY(orbitRadiusKM, angleRad, scaleOrbits.planetScale);
+        x = pos.x;
+        y = pos.y;
       }
 
       return `translate(${x}, ${y})`;
@@ -841,15 +950,19 @@ viewof solarSystem = {
 
     // === Movimento orbital dos asteroides ===
     asteroidGroups.attr("transform", d => {
-      // Adiciona um fator multiplicador maior para desacelerar o movimento
-      const slowFactor = 50;
-      const angle = (time / (d.orbit * d.speed * slowFactor)) * 2 * Math.PI;
-      return `rotate(${angle * 180 / Math.PI}) translate(${d.orbit}, 0)`;
+      
+      // Ajuste o multiplicador 0.0005 para aumentar ou diminuir a velocidade geral dos asteroides
+      const angleRad = (time * 0.0005 * d.speed) + d.angle;
+      const scaledR = scaleOrbits.planetScale(d.orbit_km);
+    
+      const x = scaledR * Math.cos(angleRad);
+      const y = scaledR * Math.sin(angleRad);
+      return `translate(${x}, ${y})`;
     });
   }
 
   // Aplica as posições iniciais imediatamente após a criação dos elementos
-  updatePositions(animationTime);
+  updatePositions(mutable currentAnimationTime);
 
   // === Lógica principal da animação ===
   const timer = d3.timer(rawElapsed => {
@@ -864,9 +977,9 @@ viewof solarSystem = {
     // A animação só ocorre se a simulação estiver rodando E nada estiver selecionado (sem zoom fixo)
     if(!mutable selectedObject && mutable isRunning){
       // Atualiza tempo interno da simulação baseado na velocidade
-      animationTime += deltaTime * mutable speed;
+      mutable currentAnimationTime += deltaTime * mutable speed;
       // Chamamos a função de atualização de posições
-      updatePositions(animationTime);
+      updatePositions(mutable currentAnimationTime);
     }
     // Se estiver pausado, o loop simplesmente não faz nada dentro do 'if', 
     // e o accumulatedPauseTime é ajustado no próximo clique em "Play".
@@ -880,15 +993,15 @@ viewof solarSystem = {
   return container;
 }
 
-// Célula 16.1: [Estado de Seleção] ==========================================================
+// Célula 16.1: [Estado de Seleção] ===========================================================
 // Armazena o objeto selecionado (planeta, lua ou sol). Null se nada estiver selecionado.
 mutable selectedObject = null;
 
-// Célula 16.2: [Estado do painel lateral] ===================================================
+// Célula 16.2: [Estado do painel lateral] ====================================================
 // Controla a visibilidade do painel lateral.
 mutable isPanelOpen = false;
 
-// Célula 16.3: [Painel de Informações Lateral] ==============================================
+// Célula 17: [Painel de Informações Lateral] =================================================
 
 makeInfoPanel = function(container, width, onCloseHandler) {
   
@@ -931,15 +1044,15 @@ makeInfoPanel = function(container, width, onCloseHandler) {
   return infoPanel;
 }
 
-// Célula 17: [Estado global do modo LIVE] ===================================================
+// Célula 18: [Estado global do modo LIVE] ====================================================
 
-// Célula 17.1: [Modo de operação] ===========================================================
+// Célula 18.1: [Modo de operação] ============================================================
 mutable isLiveMode = false;
 
-// Célula 17.2: [Cache local das posições LIVE] ==============================================
+// Célula 18.2: [Cache local das posições LIVE] ===============================================
 mutable livePositions = {};
 
-// Célula 18: [Fetch LIVE para TODOS os corpos] ============================================
+// Célula 19: [Fetch LIVE para TODOS os corpos] ===============================================
 
 async function fetchAllLivePositions(setStatus = () => {}) {
 
