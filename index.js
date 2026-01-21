@@ -37,16 +37,24 @@ moons = [
   // A propriedade 'planet' serve como chave estrangeira para vincular a lua ao seu corpo pai.
   // 'orbit' aqui representa a distância média em relação ao centro do planeta (em km).
   // 'period' é o tempo de translação ao redor do planeta em dias terrestres.
-  { name: "Lua", planet: "Terra", radius: 2, orbit: 384400, period: 27.3 },
+  { 
+    name: "Lua", 
+    planet: "Terra", 
+    radius: 2, 
+    realRadius: 1737, 
+    orbit: 384400, 
+    period: 27.3, 
+    img: "https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg" 
+  },
 
   // Luas Galileanas de Júpiter
-  { name: "Io", planet: "Júpiter", radius: 2, orbit: 421700, period: 1.77 },
-  { name: "Europa", planet: "Júpiter", radius: 2, orbit: 671100, period: 3.55 },
-  { name: "Ganimedes", planet: "Júpiter", radius: 3, orbit: 1070400, period: 7.15 },
-  { name: "Calisto", planet: "Júpiter", radius: 3, orbit: 1882700, period: 16.7 },
+  { name: "Io", planet: "Júpiter", radius: 2, realRadius: 1821, orbit: 421700, period: 1.77, img: "https://upload.wikimedia.org/wikipedia/commons/7/7b/Io_highest_resolution_true_color.jpg" },
+  { name: "Europa", planet: "Júpiter", radius: 2, realRadius: 1560, orbit: 671100, period: 3.55, img: "https://upload.wikimedia.org/wikipedia/commons/5/54/Europa-moon.jpg" },
+  { name: "Ganimedes", planet: "Júpiter", radius: 3, realRadius: 2634, orbit: 1070400, period: 7.15, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Ganymede_-_Perijove_34_Composite.png/330px-Ganymede_-_Perijove_34_Composite.png" },
+  { name: "Calisto", planet: "Júpiter", radius: 3, realRadius: 2410, orbit: 1882700, period: 16.7, img: "https://upload.wikimedia.org/wikipedia/commons/e/e9/Callisto.jpg" },
 
   // Lua de Saturno
-  { name: "Titã", planet: "Saturno", radius: 3, orbit: 1221870, period: 15.9 }
+  { name: "Titã", planet: "Saturno", radius: 3, realRadius: 2575, orbit: 1221870, period: 15.9, img: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Titan_in_true_color.jpg/330px-Titan_in_true_color.jpg" }
 ]
 
 // Célula 04: [Escala das orbitas dos planetas e das luas] ====================================
@@ -767,17 +775,25 @@ viewof solarSystem = {
     }
 
     // 1. Busca dados técnicos de planetas.
-    const pData = planets.find(p => p.name === obj.name);
+    //const pData = planets.find(p => p.name === obj.name);
+    let data;
+    if (obj.type === 'Sol') {
+      data = { realRadius: 696340, period: 0, orbit: 0, img: "https://static.escolakids.uol.com.br/2025/01/1-sol-visto-do-universo.jpg" };
+    } else if (obj.type === 'moon') {
+      data = moons.find(m => m.name === obj.name);
+    } else {
+      data = planets.find(p => p.name === obj.name);
+    }
 
     // 2. Preenchimento de Cabeçalho
     infoPanel.querySelector("#objectName").textContent = obj.name;
-    infoPanel.querySelector("#objectType").textContent = obj.type === 'planet' ? 'PLANETA' : (obj.type === 'Sol' ? 'ESTRELA' : 'LUA');
+    infoPanel.querySelector("#objectType").textContent = obj.type.toUpperCase();
     
-    if (pData) {
-      infoPanel.querySelector("#planetImg").src = pData.img;
-      infoPanel.querySelector("#objectRadius").innerHTML = `${pData.realRadius.toLocaleString()} <small style="color:#555">km</small>`;
-      infoPanel.querySelector("#objectPeriod").innerHTML = `${pData.period.toLocaleString()} <small style="color:#555">dias</small>`;
-      infoPanel.querySelector("#objectOrbit").innerHTML = `${(pData.orbit / 1e6).toFixed(1)} <small style="color:#555">mi km</small>`;
+    if (data) {
+      infoPanel.querySelector("#planetImg").src = data.img;
+      infoPanel.querySelector("#objectRadius").innerHTML = `${data.realRadius.toLocaleString()} <small style="color:#555">km</small>`;
+      infoPanel.querySelector("#objectPeriod").innerHTML = `${data.period.toLocaleString()} <small style="color:#555">dias</small>`;
+      infoPanel.querySelector("#objectOrbit").innerHTML = obj.type === 'Sol' ? "Centro" : `${(data.orbit / 1e6).toFixed(1)} <small style="color:#555">mi km</small>`;
     }
 
     // 3. Orquestra a criação de 4 gráficos especializados (Bolhas, Barras, Log e Linhas)
@@ -805,8 +821,12 @@ viewof solarSystem = {
         area.appendChild(card);
       });
     } else {
-      area.innerHTML = `<div style="text-align:center; color:#444; margin-top:50px;">Gráficos detalhados disponíveis apenas para planetas.</div>`;
-    }    
+      // Mensagem amigável para Sol e Luas (já que os gráficos comparativos são baseados na lista de planetas)
+      area.innerHTML = `<div style="text-align:center; color:#444; margin-top:50px;">
+        Informações detalhadas de gráficos disponíveis apenas no comparativo de planetas.
+      </div>`;
+    }
+    
     infoPanel.style.display = "block";
   };
 
@@ -945,29 +965,56 @@ viewof solarSystem = {
       // Determina o alvo do zoom baseado no modo ativo (Real ou Simulação).
       let targetX, targetY;
 
-      if(mutable isLiveMode && mutable livePositions?.[d.name]){
-        // Se estiver em LIVE, use a posição REAL (eixo X/Y) e a função de projeção
-        const livePos = mutable livePositions[d.name];
-        const projectedPos = projectLivePosition(livePos);
-        targetX = projectedPos.x;
-        targetY = projectedPos.y;
-        
-      } else if(mutable staticOrbits?.planets?.[d.name]){
-        // SE ESTIVER NO MODO ESTÁTICO (GitHub), use a mesma conta via modelo Kepleriano do updatePositions
-        const el = mutable staticOrbits.planets[d.name];
-        const posAU = auxiliaryOrbitalFunctions.orbitalElementsToXY(el, mutable currentAnimationTime / 100);
-        const AU_TO_KM = 149597870;
-        const rKM = Math.sqrt((posAU.x * AU_TO_KM)**2 + (posAU.y * AU_TO_KM)**2);
-        const angleRad = Math.atan2(posAU.y, posAU.x);
-        const pos = calculateXY(rKM, angleRad, scaleOrbits.planetScale);
-        targetX = pos.x; targetY = pos.y;
+      if (type === 'moon') {
+        // 1. Se estivermos em modo LIVE, pegamos a posição REAL da NASA para a Lua
+        if (mutable isLiveMode && mutable livePositions?.[d.name]) {
+          const livePos = mutable livePositions[d.name];
+          const projectedPos = projectLivePosition(livePos);
+          targetX = projectedPos.x;
+          targetY = projectedPos.y;
+        } else {
+          // 2. Se for Simulação, calculamos a posição da Lua somada à do Planeta Pai
+          const parentPlanet = planets.find(p => p.name === d.planet);
+          
+          // Posição do Planeta Pai (Usando a mesma lógica do updatePositions)
+          let pX, pY;
+          if (mutable staticOrbits?.planets?.[parentPlanet.name]) {
+            const el = mutable staticOrbits.planets[parentPlanet.name];
+            const posAU = auxiliaryOrbitalFunctions.orbitalElementsToXY(el, mutable currentAnimationTime / 100);
+            const AU_TO_KM = 149597870;
+            const rKM = Math.sqrt((posAU.x * AU_TO_KM)**2 + (posAU.y * AU_TO_KM)**2);
+            const angleRad = Math.atan2(posAU.y, posAU.x);
+            const pos = calculateXY(rKM, angleRad, scaleOrbits.planetScale);
+            pX = pos.x; pY = pos.y;
+          } else {
+            const pAngle = (mutable currentAnimationTime / (parentPlanet.period * 100)) * 2 * Math.PI;
+            const pPos = calculateXY(parentPlanet.orbit, pAngle, scaleOrbits.planetScale);
+            pX = pPos.x; pY = pPos.y;
+          }
+      
+          // Posição Relativa da Lua (Simulação)
+          const mAngle = (mutable currentAnimationTime / (d.period * 50)) * 2 * Math.PI;
+          const mR = scaleOrbits.moonScale(d.orbit);
+          const mX = mR * Math.cos(mAngle);
+          const mY = mR * Math.sin(mAngle);
+      
+          // Alvo final é a soma vetorial
+          targetX = pX + mX;
+          targetY = pY + mY;
+        }
+      } else if (d.name === 'Sol') {
+        targetX = 0; targetY = 0;
+      } else if (mutable isLiveMode && mutable livePositions?.[d.name]) {
+        const projectedPos = projectLivePosition(mutable livePositions[d.name]);
+        targetX = projectedPos.x; targetY = projectedPos.y;
       } else {
-        // Fallback para Sol ou simulação básica
-        const pos = getObjectPosition(d, mutable currentAnimationTime);
+        // Lógica para Planetas (Estático/Simulação)
+        const pos = getPos(d.name, mutable currentAnimationTime);
         targetX = pos.x; targetY = pos.y;
       }
 
-      const scale = 5; // Fator de zoom fixo para todos os objetos
+      // Fator de zoom mais potente para Luas para não vermos apenas um borrão
+      const scale = type === 'moon' ? 15 : (type === 'Sol' ? 2 : 5);
 
       // Aplica uma transição suave de Interpolação Geométrica para focar no objeto.
       // A matemática aqui compensa a escala para manter o planeta centralizado no zoom.
