@@ -169,7 +169,7 @@ Este projeto possui uma Licença MIT License - veja o arquivo [LICENSE](./LICENS
       </a>
     </td>
     <td>
-      <a href="https://github.com/fco-alves](https://github.com/joaoVictorBAlves">
+      <a href="https://github.com/joaoVictorBAlves">
         <img src="https://avatars.githubusercontent.com/u/86852231?v=4" width=100 />
         <p>João Victor</p>
       </a>
